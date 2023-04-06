@@ -1,0 +1,124 @@
+ARG BASE_CONTAINER
+FROM $BASE_CONTAINER
+
+# 声明使用的变量, 必须放在FROM后面
+ARG DEP_TENSORFLOW1
+ARG DEP_TENSORFLOW132
+ARG DEP_TENSORFLOW2
+ARG DEP_TORCH
+ARG DEP_TORCHVISION
+
+USER root
+ENV TZ=Asia/Shanghai
+
+# 清理资源
+RUN ln -sf /bin/bash /bin/sh && \
+  ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+  echo $TZ > /etc/timezone && \
+  rm -rf /etc/apt/sources.list.d/nvidia-ml.list && \
+  rm -rf /etc/apt/sources.list.d/cuda.list
+
+# 安装系统依赖
+RUN apt-get -y update && \
+  apt-get install --no-install-recommends -y \
+     iputils-ping \
+     git \
+     curl \
+     ca-certificates-java \
+     language-pack-zh-han* \
+     unzip \
+     net-tools \
+     tmux \
+     ttf-mscorefonts-installer \
+     fontconfig \
+     zip \
+     psmisc \
+     vim \
+     graphviz \
+     openssl \
+     libssl-dev \
+     liblzo2-dev \
+     openssh-server && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+# 构建python-2
+RUN conda create --yes -p $CONDA_DIR/envs/python-2 python=2 ipython ipykernel kernda && \
+  $CONDA_DIR/envs/python-2/bin/python -m ipykernel install --name python-2 --display-name "Python 2" && \
+  conda clean --all -f -y
+
+# # 构建 pyspark
+RUN conda create --yes -p $CONDA_DIR/envs/pyspark python=3.7 ipython ipykernel && \
+  $CONDA_DIR/envs/pyspark/bin/python -m ipykernel install --name pyspark --display-name "pyspark" && \
+  rm /usr/local/share/jupyter/kernels/pyspark/logo-32x32.png /usr/local/share/jupyter/kernels/pyspark/logo-64x64.png && \
+  $CONDA_DIR/envs/pyspark/bin/pip install --no-cache-dir dabl seaborn eli5 shap catboost matplotlib sklearn tqdm pydot && \
+  conda clean --all -f -y
+
+# 构建 tensorflow-1
+RUN conda create --yes -p $CONDA_DIR/envs/tensorflow-1 python=3.7 ipython ipykernel && \
+  $CONDA_DIR/envs/tensorflow-1/bin/python -m ipykernel install --name tensorflow-1 --display-name "Tensorflow 1" && \
+  rm /usr/local/share/jupyter/kernels/tensorflow-1/logo-32x32.png /usr/local/share/jupyter/kernels/tensorflow-1/logo-64x64.png && \
+  if [[ ${CUDA_VERSION} =~ 10.0 ]]; then \
+    conda install -n tensorflow-1 cudatoolkit=10.0; \
+  elif [[ ${CUDA_VERSION} =~ 10.1 ]]; then  \
+    conda install -n tensorflow-1 cudatoolkit=10.1; \
+  elif [[ ${CUDA_VERSION} =~ 11.7 ]]; then  \
+    conda install -n tensorflow-1 cudatoolkit=11.7; \
+  fi && \
+  $CONDA_DIR/envs/tensorflow-1/bin/pip install --no-cache-dir dabl seaborn eli5 shap catboost matplotlib sklearn tqdm $DEP_TENSORFLOW1 numpy==1.18.4 pydot && \
+  conda clean --all -f -y
+
+# 构建 tensorflow-1-13-2
+RUN conda create --yes -p $CONDA_DIR/envs/tensorflow-1-13-2 python=3.7 ipython ipykernel && \
+  $CONDA_DIR/envs/tensorflow-1-13-2/bin/python -m ipykernel install --name tensorflow-1-13-2 --display-name "Tensorflow 1.13.2" && \
+  rm /usr/local/share/jupyter/kernels/tensorflow-1-13-2/logo-32x32.png /usr/local/share/jupyter/kernels/tensorflow-1-13-2/logo-64x64.png && \
+  if [[ ${CUDA_VERSION} =~ 10.0 ]]; then \
+    conda install -n tensorflow-1 cudatoolkit=10.0; \
+  elif [[ ${CUDA_VERSION} =~ 10.1 ]]; then  \
+    conda install -n tensorflow-1 cudatoolkit=10.1; \
+  elif [[ ${CUDA_VERSION} =~ 11.7 ]]; then  \
+    conda install -n tensorflow-1 cudatoolkit=11.7; \
+  fi && \
+  $CONDA_DIR/envs/tensorflow-1-13-2/bin/pip install --no-cache-dir $DEP_TENSORFLOW132 numpy==1.18.4 pydot && \
+  conda clean --all -f -y
+
+# 构建 tensorflow-2
+RUN conda create --yes -p $CONDA_DIR/envs/tensorflow-2 python=3.7 ipython ipykernel && \
+  $CONDA_DIR/envs/tensorflow-2/bin/python -m ipykernel install --name tensorflow-2 --display-name "Tensorflow 2" && \
+  rm /usr/local/share/jupyter/kernels/tensorflow-2/logo-32x32.png /usr/local/share/jupyter/kernels/tensorflow-2/logo-64x64.png && \
+  $CONDA_DIR/envs/tensorflow-2/bin/pip install --no-cache-dir $DEP_TENSORFLOW2 pydot && \
+  conda clean --all -f -y
+
+# 构建 pytorch
+RUN conda create --yes -p $CONDA_DIR/envs/pytorch python=3.7 ipython ipykernel && \
+  $CONDA_DIR/envs/pytorch/bin/python -m ipykernel install --name pytorch --display-name "PyTorch" && \
+  rm /usr/local/share/jupyter/kernels/pytorch/logo-32x32.png /usr/local/share/jupyter/kernels/pytorch/logo-64x64.png && \
+  $CONDA_DIR/envs/pytorch/bin/pip install --no-cache-dir $DEP_TORCH $DEP_TORCHVISION pydot -f https://download.pytorch.org/whl/torch_stable.html && \
+  conda clean --all -f -y
+
+# 构建 dask
+RUN conda create --yes -p $CONDA_DIR/envs/dask python=3.7 ipython ipykernel && \
+  $CONDA_DIR/envs/dask/bin/python -m ipykernel install --name dask --display-name "Dask" && \
+  rm /usr/local/share/jupyter/kernels/dask/logo-32x32.png /usr/local/share/jupyter/kernels/dask/logo-64x64.png && \
+  $CONDA_DIR/envs/dask/bin/pip install --no-cache-dir lz4==3.0.2 dask-xgboost==0.1.9 distributed==2.9.1 dask==2.9.1 scikit-learn hdfs3 xgboost==1.0.0 \
+                          dabl seaborn eli5 shap catboost matplotlib sklearn tqdm pydot && \
+  conda clean --all -f -y
+
+# 添加插件
+# 遵从jupyter规范，先构建kernel, 在安装插件
+RUN conda install -c conda-forge jupyter-resource-usage ipympl==0.5.8 xeus-python jupyterlab-git && \
+  conda clean --all -f -y && \
+  pip install --no-cache-dir -U nodejs jupyterlab_latex  && \
+  jupyter serverextension enable --sys-prefix jupyterlab_latex && \
+  jupyter labextension install --no-build \
+          @jupyterlab/debugger \
+          jupyterlab-spreadsheet \
+          spreadsheet-editor \
+          @jupyterlab/latex \
+          jupyterlab-topbar-extension \
+          jupyterlab-system-monitor \
+          jupyterlab-theme-toggle \
+          @krassowski/jupyterlab_go_to_definition && \
+  # build assets
+  jupyter lab build --dev-build=False --minimize=False -y && \
+  jupyter lab clean -y
