@@ -1,0 +1,70 @@
+FROM devenami/jupyter-scipy-notebook:202304062030
+
+USER root
+ENV TZ=Asia/Shanghai
+
+RUN ln -sf /bin/bash /bin/sh && \
+  ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+  echo $TZ > /etc/timezone && \
+  apt-get -y update && \
+  apt-get install --no-install-recommends -y \
+     iputils-ping \
+     git \
+     curl \
+     ca-certificates-java \
+     language-pack-zh-han* \
+     unzip \
+     net-tools \
+     tmux \
+     ttf-mscorefonts-installer \
+     fontconfig \
+     zip \
+     psmisc \
+     vim \
+     graphviz \
+     openssl \
+     libssl-dev \
+     liblzo2-dev \
+     openssh-server && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN conda update -n base conda && conda clean --all -f -y
+
+# 添加插件
+# 遵从jupyter规范，先构建kernel, 在安装插件
+RUN conda install -c conda-forge jupyter-resource-usage ipympl xeus-python jupyterlab-git && \
+  conda clean --all -f -y && \
+  pip install --no-cache-dir -U nodejs jupyterlab_latex  && \
+  jupyter serverextension enable --sys-prefix jupyterlab_latex
+
+RUN jupyter labextension install --no-build \
+          @jupyterlab/debugger \
+          jupyterlab-spreadsheet \
+          spreadsheet-editor \
+          @jupyterlab/latex \
+          jupyterlab-topbar-extension \
+          jupyterlab-system-monitor \
+          jupyterlab-theme-toggle \
+          @krassowski/jupyterlab_go_to_definition
+
+RUN jupyter lab build --dev-build=False --minimize=False -y && jupyter lab clean -y
+
+RUN conda create --yes -p $CONDA_DIR/envs/tensorflow-2 python=3.8 ipython ipykernel && \
+    $CONDA_DIR/envs/tensorflow-2/bin/python -m ipykernel install --name tensorflow-2 --display-name "Tensorflow 2" && \
+    $CONDA_DIR/envs/tensorflow-2/bin/pip install --no-cache-dir tensorflow==2.12.0 pydot && \
+    conda clean --all -f -y
+
+RUN conda create --yes -p $CONDA_DIR/envs/pyspark python=3.8 ipython ipykernel && \
+    $CONDA_DIR/envs/pyspark/bin/python -m ipykernel install --name pyspark --display-name "pyspark" && \
+    conda clean --all -f -y
+
+RUN conda create --yes -p $CONDA_DIR/envs/python3-7 python=3.7 ipython ipykernel && \
+    $CONDA_DIR/envs/python3-7/bin/pip install --upgrade jupyter_client && \
+    $CONDA_DIR/envs/python3-7/bin/python -m ipykernel install --name python3-7 --display-name "python 3.7" && \
+    conda clean --all -f -y
+
+RUN conda create --yes -p $CONDA_DIR/envs/pytorch python=3.8 ipython ipykernel && \
+    $CONDA_DIR/envs/pytorch/bin/python -m ipykernel install --name pytorch --display-name "pytorch" && \
+    $CONDA_DIR/envs/pytorch/bin/pip install --no-cache-dir torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117 && \
+    conda clean --all -f -y

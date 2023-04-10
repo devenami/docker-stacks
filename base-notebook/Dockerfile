@@ -5,7 +5,7 @@
 # https://hub.docker.com/_/ubuntu/?tab=tags&name=focal
 # OS/ARCH: linux/amd64
 # ARG ROOT_CONTAINER=ubuntu:focal-20201106@sha256:4e4bc990609ed865e07afc8427c30ffdddca5153fd4e82c20d8f0783a291e241
-ARG ROOT_CONTAINER=nvidia/cuda:11.7.0-devel-ubuntu18.04
+ARG ROOT_CONTAINER=nvidia/cuda:11.7.0-cudnn8-devel-ubuntu18.04
 
 ARG BASE_CONTAINER=$ROOT_CONTAINER
 FROM $BASE_CONTAINER
