@@ -1,4 +1,4 @@
-FROM devenami/jupyter-scipy-notebook:202304062030
+FROM jupyter/scipy-notebook:latest
 
 USER root
 ENV TZ=Asia/Shanghai

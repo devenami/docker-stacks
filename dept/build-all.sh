@@ -1,0 +1,1 @@
+cd .. && cd base-notebook/ && docker build -t jupyter/base-notebook . && cd ../minimal-notebook/ && docker build -t jupyter/minimal-notebook . && cd ../scipy-notebook/ && docker build -t jupyter/scipy-notebook . && cd ../dept/ && docker build -t devenami/jupyter-dept:202304121000 -f Dockerfile.cuda.117 .
